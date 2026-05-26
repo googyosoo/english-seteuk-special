@@ -227,6 +227,56 @@ export const finalSanitizeSeteuk = (text, studentName) => {
     clean = clean.replace(rep.pattern, rep.replace);
   });
 
+  // [v5.8 어미 연속 중복 감지 및 리드미컬 다변화 교차 치환 알고리즘]
+  // 마침표 기준으로 문장을 정교하게 분리
+  const sentences = clean.split(/(?<=\.)\s+/);
+  if (sentences.length > 1) {
+    let prevEndingType = '';
+    const substitutesForHam = ['이 확인됨.', '을 드러냄.', '의 토대를 세움.', '을 가늠케 함.', '의 결이 잡힘.'];
+    const substitutesForEum = ['으로 보임.', '이 돋보임.', '을 입증함.', '에 도달함.', '을 이끌어냄.'];
+    const substitutesForIm = ['으로 확인됨.', '으로 귀결됨.', '을 방증함.', '에 닿아 있음.'];
+
+    let subHamIdx = 0;
+    let subEumIdx = 0;
+    let subImIdx = 0;
+
+    for (let i = 0; i < sentences.length; i++) {
+      let s = sentences[i].trim();
+      if (!s) continue;
+
+      let currentEndingType = '';
+      if (s.endsWith('함.')) currentEndingType = '함';
+      else if (s.endsWith('했음.')) currentEndingType = '했음';
+      else if (s.endsWith('음.')) currentEndingType = '음';
+      else if (s.endsWith('임.')) currentEndingType = '임';
+
+      if (currentEndingType && currentEndingType === prevEndingType) {
+        if (currentEndingType === '함' || currentEndingType === '했음') {
+          const replacement = substitutesForHam[subHamIdx % substitutesForHam.length];
+          s = s.replace(/(?:했음|함)\.?$/, replacement);
+          subHamIdx++;
+        } else if (currentEndingType === '음') {
+          const replacement = substitutesForEum[subEumIdx % substitutesForEum.length];
+          s = s.replace(/음\.?$/, replacement);
+          subEumIdx++;
+        } else if (currentEndingType === '임') {
+          const replacement = substitutesForIm[subImIdx % substitutesForIm.length];
+          s = s.replace(/임\.?$/, replacement);
+          subImIdx++;
+        }
+      }
+
+      // 연속 여부 갱신을 위해 어미 상태 기록
+      if (s.endsWith('함.')) prevEndingType = '함';
+      else if (s.endsWith('음.')) prevEndingType = '음';
+      else if (s.endsWith('임.')) prevEndingType = '임';
+      else prevEndingType = currentEndingType;
+
+      sentences[i] = s;
+    }
+    clean = sentences.join(' ');
+  }
+
   // 혹시 모를 꼬여버린 공백 정제
   clean = clean.replace(/\s+/g, ' ').trim();
   
@@ -543,6 +593,31 @@ const runStandardAgent = async (subject, selectedStandards, onProgress) => {
   };
 };
 
+// --- [v5.8] 진로명 직접 노출 방지 및 고차원 학술 역량 승화 매퍼 ---
+const sublimateCareerText = (career) => {
+  if (!career) return '';
+  const name = career.name || '';
+  if (name.includes('의학') || name.includes('보건') || name.includes('바이오')) {
+    return '생명 현상 및 의료 보건 관련 사회적 쟁점에 내재된 인도주의적 가치관과 인간 이해의 맥락을 분석하며';
+  }
+  if (name.includes('컴퓨터') || name.includes('IT') || name.includes('소프트웨어') || name.includes('인공지능') || name.includes('공학')) {
+    return '기술 공학적 원리와 알고리즘적 사고를 바탕으로 시스템의 논리 구조를 정교하게 분석하고 추상화하며';
+  }
+  if (name.includes('경영') || name.includes('경제') || name.includes('무역') || name.includes('금융')) {
+    return '시장 메커니즘의 실증 데이터와 글로벌 정책 상관관계를 다변화 관점에서 계량화하고 통찰하며';
+  }
+  if (name.includes('인문') || name.includes('어문') || name.includes('역사') || name.includes('철학')) {
+    return '역사·철학적 텍스트 이면에 흐르는 다원적 문화 담론과 인간 보편의 본질적 가치를 비판적으로 해석하며';
+  }
+  if (name.includes('사회') || name.includes('정치') || name.includes('법률') || name.includes('행정') || name.includes('외교')) {
+    return '제도적 사회 질서와 정의론 담론 속 갈등 구조를 비교사회학적 관점으로 면밀히 추론하며';
+  }
+  if (name.includes('예술') || name.includes('디자인') || name.includes('미디어') || name.includes('체육')) {
+    return '매체 기호학적 상징성과 대중 전달 매커니즘의 소통 방식을 다각도에서 입체적으로 관찰하고 변주하며';
+  }
+  return '다학제적 학술 지평의 쟁점과 교과 지식을 유기적으로 연결하고 다변화 분석을 시도하며';
+};
+
 // --- 서브 에이전트 2: 다차원 역량/활동/진로 융합 에이전트 (v5.5 - 무주어 및 명사형 종결) ---
 const runCompetencyAgent = async (activities, competencies, obsDetail, selectedCareer, onProgress) => {
   onProgress('수업 탐구 활동 칩 및 전공 학술 시사 키워드 결합 중...');
@@ -553,7 +628,8 @@ const runCompetencyAgent = async (activities, competencies, obsDetail, selectedC
 
   let careerText = '';
   if (selectedCareer) {
-    careerText = ` 자신의 진로 지향점인 ${selectedCareer.name} 계열의 사회적 쟁점과 교과 지식을 지능적으로 교차 인지하고 ${selectedCareer.intro} ${selectedCareer.desc}`;
+    const sublimated = sublimateCareerText(selectedCareer);
+    careerText = ` 관심 학술 영역인 ${sublimated} 교과 지식을 지능적으로 교차 인지하고`;
   }
 
   let obsPart = '';
@@ -730,20 +806,20 @@ export const generateSeteuk = async (params, onAgentUpdate) => {
     if (tone.id === 'academic') {
       output = output
         .replace(/보여주어/g, '보여주었으며, 이로부터 깊은 학술적 통찰의 지평을')
-        .replace(/돋보임./g, '돋보이며, 자신만의 논리적 에세이를 완성도 높게 집필해 내는 분석적 독창성이 깊이 있게 자리 잡음.')
-        .replace(/해결함./g, '해결해 내는 구조적 분석력과 지적 유기성이 안정적임.')
-        .replace(/실천함./g, '내면화하여 높은 학업적 정합성을 입증함.')
-        .replace(/우수함./g, '안정적이며 향후 영어로 전문 텍스트를 다룰 수 있는 집요한 연구적 자세를 나타냄.');
+        .replace(/돋보임./g, '돋보이며, 자신만의 논리적 에세이를 완성도 높게 집필해 내는 분석적 독창성이 깊이 있게 자리 잡음. 지식의 표면을 넘어 집요하게 탐색하려는 학구열은 교사로서도 큰 자극을 줄 정도로 깊은 인상을 남김.')
+        .replace(/해결함./g, '해결해 내는 구조적 분석력과 지적 유기성이 안정적이고, 늘 질문을 던져 탐구의 연결고리를 스스로 찾아내는 모습이 대단히 믿음직함.')
+        .replace(/실천함./g, '내면화하여 높은 학업적 정합성을 입증함. 주변 조원들과 능동적인 학문적 대화를 나누며 교실 안 탐구의 지평을 넓힘.')
+        .replace(/우수함./g, '안정적이며 향후 영어로 전문 텍스트를 다룰 수 있는 집요한 연구적 자세와 탐구에 몰입하는 학술적 근성을 나타냄.');
     } else if (tone.id === 'active') {
       output = output
-        .replace(/학습 태도를 보여줌./g, '영어 독해 및 스피칭 역량으로 학급 전체의 도전적 배움 분위기를 주도함.')
-        .replace(/성실함이 돋보임./g, '매 과업마다 조원들과 긴밀히 소통하며 학급 기여도 및 책임 의식 측면에서 귀감이 됨.')
-        .replace(/실천함./g, '도약시키며 모둠 협력 학습의 모범을 몸소 실천함.');
+        .replace(/학습 태도를 보여줌./g, '영어 독해 및 스피칭 역량으로 학급 전체의 도전적 배움 분위기를 주도하였고, 매 과업마다 밝고 긍정적인 기운으로 팀을 든든하게 받쳐 줌.')
+        .replace(/성실함이 돋보임./g, '매 과업마다 조원들과 긴밀히 소통하며 학급 기여도 및 책임 의식 측면에서 큰 귀감이 됨. 어려운 상황에서도 솔선수범하며 모둠을 따뜻하게 아우르는 협력적 태도가 돋보임.')
+        .replace(/실천함./g, '도약시키며 배움의 참된 즐거움을 학급 공동체와 아낌없이 나누는 따뜻한 연대의 가치를 몸소 실천함.');
     } else if (tone.id === 'warm') {
       output = output
-        .replace(/탁월함./g, '지적 감수성과 조화로운 경청의 미덕을 아낌없이 펼치며 수행함.')
-        .replace(/의지가 빛남./g, '포기하지 않는 인내심을 바탕으로 단어 장벽을 극복하며 매일 점진적인 성장의 발걸음을 옮겨 나감.')
-        .replace(/보임./g, '교류하여 학급 내 긍정적이고 따뜻한 배움의 분위기를 꽃피움.');
+        .replace(/탁월함./g, '지적 감수성과 조화로운 경청의 미덕을 아낌없이 펼쳐 동료 조원들로 하여금 두터운 신뢰감을 자아냄.')
+        .replace(/의지가 빛남./g, '포기하지 않는 인내심을 바탕으로 단어 장벽을 극복하며 매일 점진적인 성장의 발걸음을 옮겨 나감. 이러한 끈기 있는 배움의 자세는 교사에게도 깊은 감동을 선사함.')
+        .replace(/보임./g, '교류하여 학급 내 긍정적이고 따뜻한 배움의 분위기를 꽃피움. 주변 친구들의 어려움을 소리 없이 감싸 안고 아우르는 고결한 인성적 자질이 확인됨.');
     }
     
     // 최종 보정: 이름이나 대명사, 또는 어미 에러를 2차 클리닝
