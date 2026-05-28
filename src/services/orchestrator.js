@@ -738,7 +738,7 @@ const runPersonaAgent = async (studentName, characteristics, growths, grade, per
   } else if (grade === 'mid') {
     sentence += ` 영어 읽기/쓰기 전반에서 모둠의 조율자 역할을 성실히 감당하였고, 동료 조원들의 의견을 폭넓게 경청하며 논리적인 영문 개요 작성을 리드하는 협업 역량이 돋보임.`;
   } else {
-    sentence += ` 모르는 단어와 복잡한 문법 장벽을 영영사전 활용 및 복습용 오답노트 정리로 차근차근 보완해 나갔으며, 점진적인 배움의 기쁨을 몸소 획득해 내는 끈기가 돋보임.`;
+    sentence += ` 주어진 도움 자료와 교사의 오류 수정 피드백을 성실하게 수용하여 기초적인 단어 장벽을 극복하고자 노력함. 매 수업 성찰일지와 오답 노트를 꼼꼼히 정리하며 부족한 부분을 보완하고 점진적인 배움의 성장을 이루어 나가는 끈기가 돋보임.`;
   }
 
   return {
@@ -967,35 +967,65 @@ export const calculateNeisBytes = (text) => {
 /**
  * 바이트 초과 안전 오토트림 압축기 (NEIS Auto-Trim Engine)
  */
-export const autoTrimNeis = (text, maxBytes = 800) => {
+export const autoTrimNeis = (text, maxBytes = 1500) => {
   if (!text) return '';
   let currentBytes = calculateNeisBytes(text).bytes;
   if (currentBytes <= maxBytes) return text;
 
   let trimmedText = text;
+  
+  // 1단계: 의미를 보존하면서 길이를 대폭 압축하는 지능형 압축 룰셋 가동
   trimmedText = trimmedText
+    .replace(/자신의 진로 포부나 학업 열정을 담아/g, '')
+    .replace(/수준 높은 연결사와 고급 학술 어휘를 적재적소에 활용하여/g, '고급 어휘를 활용하여')
+    .replace(/단순 암기를 극복하고 영어 지식을 자기 진로 가치관과 연계하여/g, '영어 지식을 가치관과 연계하여')
+    .replace(/어려운 구문을 집요하게 파고들어 자기화하는 학습 근성이 돋보이며/g, '어려운 구문을 파고드는 학습 근성이 돋보여')
+    .replace(/배움의 참된 즐거움을 학급 공동체와 아낌없이 나누는/g, '배움의 즐거움을 학급과 나누는')
+    .replace(/주변 친구들의 어려움을 소리 없이 감싸 안고 아우르는/g, '주변 친구들의 어려움을 감싸 안는')
+    .replace(/포기하지 않는 인내심을 바탕으로 단어 장벽을 극복하며/g, '인내심을 바탕으로 단어 장벽을 극복하여')
+    .replace(/스스로 오류를 수정, 최종 원고에서 완성도 높은 소개 글을 작성하고/g, '스스로 오류를 수정하여 소개 글을 작성하고')
+    .replace(/매 과업마다 조원들과 긴밀히 소통하며 학급 기여도 및 책임 의식 측면에서 큰 귀감이 됨./g, '매 과업 조원들과 소통하며 큰 귀감이 됨.')
+    .replace(/지식의 표면을 넘어 집요하게 탐색하려는 학구열은 교사로서도 큰 자극을 줄 정도로 깊은 인상을 남김./g, '집요하게 탐색하려는 학구열이 돋보임.')
+    .replace(/해결해 내는 구조적 분석력과 지적 유기성이 안정적이고, 늘 질문을 던져 탐구의 연결고리를 스스로 찾아내는 모습이 대단히 믿음직함./g, '구조적 분석력이 뛰어나고 스스로 질문을 던져 탐구하는 모습이 돋보임.')
     .replace(/보여주어/g, '보여주고')
     .replace(/보여주었으며,/g, '보여주고')
-    .replace(/탁월한 학습 태도를 보여줌./g, '학습 태도가 뛰어남.')
     .replace(/성실하게 완수하며/g, '성실히 하며')
     .replace(/긍정적인 도약이 관찰됨./g, '성장이 돋보임.')
     .replace(/스스로 과제를 해결하는/g, '주도적으로 문제를 해결하는')
     .replace(/피드백을 수준 높게 적용해 나가는/g, '피드백을 잘 적용하여');
 
+  // 압축 후 다시 바이트 체크
+  currentBytes = calculateNeisBytes(trimmedText).bytes;
+  if (currentBytes <= maxBytes) return trimmedText;
+
+  // 2단계: 여전히 초과하는 경우, 기계적으로 자르는 대신 온전한 '문장 단위'로만 슬라이싱
+  const sentences = trimmedText.split(/(?<=\.)\s+/);
   let resultText = '';
-  let currentByteCount = 0;
-  for (let i = 0; i < trimmedText.length; i++) {
-    const char = trimmedText.charCodeAt(i);
-    const charLen = ((char >= 0xAC00 && char <= 0xD7A3) || (char >= 0x1100 && char <= 0x11FF)) ? 3 : 1;
-    if (currentByteCount + charLen > maxBytes - 3) {
-      resultText += '...';
-      break;
+  let accumulatedBytes = 0;
+
+  for (let i = 0; i < sentences.length; i++) {
+    const sentence = sentences[i].trim();
+    if (!sentence) continue;
+    
+    const sentenceBytes = calculateNeisBytes(sentence).bytes;
+    if (resultText === '') {
+      resultText = sentence;
+      accumulatedBytes = sentenceBytes;
+    } else {
+      if (accumulatedBytes + 1 + sentenceBytes <= maxBytes) {
+        resultText += ' ' + sentence;
+        accumulatedBytes += 1 + sentenceBytes;
+      } else {
+        break;
+      }
     }
-    resultText += trimmedText[i];
-    currentByteCount += charLen;
   }
 
-  if (!resultText.endsWith('.')) resultText += '.';
+  resultText = resultText.trim();
+  if (resultText && !resultText.endsWith('.')) {
+    resultText += '.';
+  }
+  
   return resultText;
 };
 

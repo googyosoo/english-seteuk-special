@@ -1170,6 +1170,81 @@ function App() {
                 </div>
               </div>
 
+              {/* 교육부 기준 도달 성취수준(상/중/하) 선택 칩셋 */}
+              <div className="form-group">
+                <label className="form-label">
+                  🎯 교육부 기준 도달 성취수준 (수업 및 수행평가 결과 판정) <span>*</span>
+                </label>
+                <div style={{display: 'flex', gap: '10px', marginTop: '6px'}}>
+                  <button
+                    type="button"
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '10px',
+                      border: selectedGrade === 'high' ? '1px solid var(--neon-emerald)' : '1px solid rgba(255,255,255,0.08)',
+                      background: selectedGrade === 'high' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0,0,0,0.3)',
+                      color: selectedGrade === 'high' ? '#fff' : 'var(--text-secondary)',
+                      fontWeight: selectedGrade === 'high' ? 800 : 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'center',
+                      fontSize: '0.8rem'
+                    }}
+                    onClick={() => {
+                      setSelectedGrade('high');
+                      triggerToast('🎯 교육부 기준 [상] 성취수준(자세하고 정확한 학업 수행)이 반영됩니다.');
+                    }}
+                  >
+                    🟢 상 (High) - 정확하고 자세한 수행
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '10px',
+                      border: selectedGrade === 'mid' ? '1px solid var(--neon-cyan)' : '1px solid rgba(255,255,255,0.08)',
+                      background: selectedGrade === 'mid' ? 'rgba(6, 182, 212, 0.15)' : 'rgba(0,0,0,0.3)',
+                      color: selectedGrade === 'mid' ? '#fff' : 'var(--text-secondary)',
+                      fontWeight: selectedGrade === 'mid' ? 800 : 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'center',
+                      fontSize: '0.8rem'
+                    }}
+                    onClick={() => {
+                      setSelectedGrade('mid');
+                      triggerToast('🎯 교육부 기준 [중] 성취수준(대체로 평이하고 무난한 수행)이 반영됩니다.');
+                    }}
+                  >
+                    🟡 중 (Mid) - 대체로 무난한 수행
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '10px',
+                      border: selectedGrade === 'low' ? '1px solid #f43f5e' : '1px solid rgba(255,255,255,0.08)',
+                      background: selectedGrade === 'low' ? 'rgba(244, 63, 94, 0.15)' : 'rgba(0,0,0,0.3)',
+                      color: selectedGrade === 'low' ? '#fff' : 'var(--text-secondary)',
+                      fontWeight: selectedGrade === 'low' ? 800 : 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'center',
+                      fontSize: '0.8rem'
+                    }}
+                    onClick={() => {
+                      setSelectedGrade('low');
+                      triggerToast('🎯 교육부 기준 [하] 성취수준(교사 피드백 중심의 부분적 수행 및 성장)이 반영됩니다.');
+                    }}
+                  >
+                    🔴 하 (Low) - 자료 참고 및 성장 노력
+                  </button>
+                </div>
+              </div>
+
               {/* 학생 희망 진로 계열 선택 칩셋 */}
               <div className="form-group">
                 <label className="form-label">학생 희망 진로 계열 연계 융합 <span className="desc">(선택 사항)</span></label>
