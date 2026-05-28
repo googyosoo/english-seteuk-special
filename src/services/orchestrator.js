@@ -11,6 +11,51 @@ export const finalSanitizeSeteuk = (text, studentName) => {
   
   let clean = text;
 
+  // [v5.9 2026학년도 교육부 기재요령 절대 금기어 안심 우회 치환 룰셋]
+  // 1) 논문, 소논문, R&E 등 학술 활동 관련 기재 금지 조항 우회
+  clean = clean
+    .replace(/소논문/g, '학술 보고서')
+    .replace(/논문/g, '탐구 보고서')
+    .replace(/R&E|알앤이/gi, '융합 탐구 과업');
+
+  // 2) 대회 및 수상 관련 금지어 우회
+  clean = clean
+    .replace(/대회 참여/g, '수행 활동 참여')
+    .replace(/대회에/g, '활동에')
+    .replace(/대회/g, '학업 활동')
+    .replace(/수상 실적/g, '성과')
+    .replace(/수상/g, '성과 결실')
+    .replace(/상장/g, '결과물');
+
+  // 3) 특정 사기업 제품명, 상호명 및 플랫폼명 우회
+  clean = clean
+    .replace(/구글 프레젠테이션/g, '협업 발표 소프트웨어')
+    .replace(/구글 드라이브/g, '클라우드 협업 저장소')
+    .replace(/구글 설문지/g, '온라인 설문 도구')
+    .replace(/구글/g, '정보 협업 플랫폼')
+    .replace(/마이크로소프트/g, '정보화 소프트웨어 제조사')
+    .replace(/MS Word|MS 워드/gi, '문서 작성 프로그램')
+    .replace(/MS Office|MS 오피스/gi, '오피스 프로그램')
+    .replace(/MS/gi, '정보화 소프트웨어 기업')
+    .replace(/애플 키노트/g, '발표용 소프트웨어')
+    .replace(/애플 아이패드/g, '태블릿 정보 기기')
+    .replace(/애플/g, '스마트 정보 기기 제조사')
+    .replace(/파워포인트|PPT|ppt/gi, '시각 자료 발표 프로그램')
+    .replace(/엑셀|Excel|excel/gi, '스프레드시트 프로그램')
+    .replace(/유튜브/g, '동영상 공유 미디어')
+    .replace(/유튜버/g, '미디어 창작자')
+    .replace(/챗GPT|ChatGPT|챗지피티|gpt-4/gi, '생성형 인공지능 플랫폼');
+
+  // 4) 구체적인 대학명, 강사명, 기관명 우회
+  clean = clean
+    .replace(/([가-힣]+)대학교/g, '고등학술기관')
+    .replace(/([가-힣]+)대학/g, (match, p1) => {
+      if (['대단', '대다', '대체', '대강', '대략'].includes(p1)) return match;
+      return '학술기관';
+    })
+    .replace(/([가-힣]+)교수/g, '학술 전문가')
+    .replace(/([가-힣]+)강사/g, '교육 전문가');
+
   // 1. 학생 이름 및 '학생' 단어 관련 주체/주어 표현 완벽 차단
   if (studentName && studentName.trim()) {
     const escapedName = studentName.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
